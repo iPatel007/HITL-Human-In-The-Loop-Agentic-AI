@@ -1,0 +1,14 @@
+# Core Framework & Utilities
+python-dotenv
+streamlit
+watchdog
+
+
+# LangChain & LangGraph Ecosystem
+langchain
+langchain-community
+langchain-openai
+
+# External Tools & Integrations
+openai
+tavily-python

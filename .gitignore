@@ -1,0 +1,54 @@
+# Environment
+.env
+.env.*
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+myenv/
+.myenv/
+
+# ChromaDB (large vector database — regenerated from PDFs)
+chroma_db/
+
+# Uploaded PDFs (user data)
+uploaded_pdfs/
+
+# Embedding cache (regenerated automatically)
+embedding_cache.db
+
+# Embeddings cache folder
+embeddings/
+
+# macOS
+.DS_Store
+.AppleDouble
+
+# Logs
+*.log
+logs/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Pytest
+.pytest_cache/
+htmlcov/
+.coverage
+.claude/
