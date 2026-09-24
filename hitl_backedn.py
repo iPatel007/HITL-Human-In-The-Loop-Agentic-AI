@@ -51,7 +51,7 @@ def get_stock_price(symbol: str) -> dict:
     """
     Fetch latest stock price of any company like (Apple, Google, HAL) 
     using Alpha Vantage with API key in the URL.
-    only return stock price only, do not show any other details
+    Must return Current Price, do not show any other details
     """
     url = (
         "https://www.alphavantage.co/query"
@@ -99,38 +99,8 @@ model_with_tools = model.bind_tools(tools)
 def chat_node(state: ChatState):
     user_input = state['messages']
     response = model_with_tools.invoke(user_input)
-    
-    if hasattr(response, "tool_calls") and response.tool_calls:
-        tool_names = [tool["name"] for tool in response.tool_calls]
-        print(f"👉 Agent is calling tools: {tool_names}")
-        
     return {'messages': [response]}    
 
-def human_review_node(state: ChatState):
-    # Pauses graph and sends the question to the user
-    state = graph.get_state(config)
-
-    if state.next and state.next[0] == "tools":
-        # Extract the tool call name from the last message
-        last_message = state.values["messages"][-1]
-        tool_call = last_message.tool_calls[0]
-        tool_name = tool_call["name"]
-        
-        # HITL confirmation prompt
-        user_approval = input(f"🤖 LLM wants to call the tool '{tool_name}'. Proceed? (yes/no): ")
-        
-        if user_approval.lower() == "yes":
-            # Step 3a: Resume execution seamlessly
-            print("🚀 Executing tool...")
-            for event in graph.stream(None, config):
-                print(event)
-        else:
-            # Step 3b: Reject or intercept (optional)
-            print("❌ Tool execution cancelled.")
-            # You could inject a refusal message back to the LLM if needed
-            
-        user_feedback = interrupt(f"Please review: {state['question']}")
-        return {"answer": user_feedback}
 
 # ============================================================
 # StateGraph
@@ -161,20 +131,40 @@ while True:
     # 2. Check if the graph paused right before the 'tools' node
     current_state = workflow.get_state(config)
     
+            
     while current_state.next and current_state.next[0] == "tools":
         # Extract details of the requested tool
         last_message = current_state.values["messages"][-1]
         tool_call = last_message.tool_calls[0]
-        tool_name = tool_call["name"]
         tool_call_id = tool_call["id"]
         
+        tool_names = []
+        if hasattr(last_message, "tool_calls") and last_message.tool_calls:            
+            tool_names = list(set(tool["name"] for tool in last_message.tool_calls))
+
+            print(f"👉 Agent is calling tools: {tool_names}")
+            
+        
         # HITL confirmation prompt in the terminal
-        user_approval = input(f"🤖 LLM wants to call the tool '{tool_name}'. Proceed? (yes/no): ")
+        user_approval = input(f"🤖 LLM wants to call the tool '{tool_names}'. Proceed? (yes/no): ")
         
         if user_approval.lower() == "yes":
             print("🚀 Executing tool...")
-            # Proceed to tool node naturally
-            response = workflow.invoke(None, config=config)
+            if 'get_stock_price' in tool_names:
+                user_approval = input(f"🤖 Do you want to purchase stock? Proceed? (yes/no): ")
+                if(user_approval.lower == 'yes'):
+                    cancellation_msg = ToolMessage(
+                                    content="Error: Tool execution rejected by the user. Do not attempt to run the tools and provide the answer. Politely tell the user that you cannot proceed without tool approval.",
+                                    tool_call_id=tool_call_id
+                                )
+                    workflow.update_state(config, {"messages": [cancellation_msg]}, as_node="tools")
+                    response = workflow.invoke(None, config=config)
+
+                else :
+                    response = workflow.invoke(None, config=config)
+            else :                    
+                # Proceed to tool node naturally
+                response = workflow.invoke(None, config=config)
         else:
             print("❌ Tool execution cancelled by user.")
             
